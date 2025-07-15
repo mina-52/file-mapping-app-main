@@ -3,27 +3,65 @@ import os
 import folium
 from folium.plugins import MarkerCluster
 
-import os
 CSV_FILE = os.path.join(os.path.dirname(__file__), 'data', 'uploaded_data.csv')
-CSV_COLUMNS = ['file_path', 'file_type', 'address', 'latitude', 'longitude']
+CSV_COLUMNS = ['file_path', 'file_type', 'description', 'address', 'latitude', 'longitude', 'upload_date']
 
 def add_data_to_csv(data: dict):
     """
     受け取ったデータをCSVファイルに追記する。
     """
+    # 必要なフィールドが存在することを確認
+    required_fields = ['file_path', 'file_type', 'address', 'latitude', 'longitude']
+    for field in required_fields:
+        if field not in data:
+            data[field] = ''
+    
+    # オプションフィールドのデフォルト値を設定
+    if 'description' not in data:
+        data['description'] = ''
+    if 'upload_date' not in data:
+        data['upload_date'] = ''
+    
     df_new = pd.DataFrame([data])
     if not os.path.exists(CSV_FILE):
         df_new.to_csv(CSV_FILE, index=False, header=True, encoding='utf-8-sig')
     else:
         df_new.to_csv(CSV_FILE, mode='a', index=False, header=False, encoding='utf-8-sig')
 
-def get_dataframe_from_csv() -> pd.DataFrame:
+def get_dataframe_from_csv():
     """
     CSVファイルからデータを読み込み、pandasデータフレームとして返す。
     """
     if not os.path.exists(CSV_FILE):
-        return pd.DataFrame(columns=CSV_COLUMNS)
-    return pd.read_csv(CSV_FILE)
+        empty_df = pd.DataFrame()
+        for column in CSV_COLUMNS:
+            empty_df[column] = []
+        return empty_df
+    
+    try:
+        # CSVファイルを読み込み、エラー処理を追加
+        df = pd.read_csv(CSV_FILE, encoding='utf-8-sig', dtype=str)
+        
+        # 古いCSVファイルの場合、新しいフィールドを追加
+        for column in CSV_COLUMNS:
+            if column not in df.columns:
+                df[column] = ''
+        
+        # 不要な列を削除（CSV_COLUMNSに含まれていない列）
+        columns_to_keep = [col for col in df.columns if col in CSV_COLUMNS]
+        df = df[columns_to_keep]
+        
+        # 空の値をNaNに変換
+        df = df.replace('', pd.NaT)
+        
+        return df
+    except Exception as e:
+        print(f"CSV読み込みエラー: {e}")
+        # エラーの場合は空のDataFrameを返す
+        empty_df = pd.DataFrame()
+        for column in CSV_COLUMNS:
+            empty_df[column] = []
+        return empty_df
 
 def create_map_html() -> str:
     """
@@ -32,9 +70,27 @@ def create_map_html() -> str:
     df = get_dataframe_from_csv()
 
     # データがあればその平均位置を、なければ日本の中心あたりを初期表示
-    if not df.empty and df['latitude'].notna().any():
-        map_center = [df['latitude'].mean(), df['longitude'].mean()]
-        zoom_start = 5
+    if not df.empty and 'latitude' in df.columns and 'longitude' in df.columns:
+        # 有効な座標をフィルタリング
+        valid_coords = []
+        for _, row in df.iterrows():
+            lat = row.get('latitude')
+            lon = row.get('longitude')
+            if lat is not None and str(lat).strip() != '' and str(lat).strip() != 'nan' and lon is not None and str(lon).strip() != '' and str(lon).strip() != 'nan':
+                try:
+                    valid_coords.append([float(lat), float(lon)])
+                except (ValueError, TypeError):
+                    continue
+        
+        if valid_coords:
+            # 平均位置を計算
+            avg_lat = sum(coord[0] for coord in valid_coords) / len(valid_coords)
+            avg_lon = sum(coord[1] for coord in valid_coords) / len(valid_coords)
+            map_center = [avg_lat, avg_lon]
+            zoom_start = 5
+        else:
+            map_center = [36.204824, 138.252924]  # 日本の地理的中心
+            zoom_start = 5
     else:
         map_center = [36.204824, 138.252924]  # 日本の地理的中心
         zoom_start = 5
@@ -50,7 +106,7 @@ def create_map_html() -> str:
         attr=gsi_attribution
     )
 
-# MarkerClusterのインスタンスを作成し、地図に追加
+    # MarkerClusterのインスタンスを作成し、地図に追加
     marker_cluster = MarkerCluster().add_to(m)
 
     icon_settings = {
@@ -62,50 +118,61 @@ def create_map_html() -> str:
 
     # ループ処理でマーカーを生成
     for _, row in df.iterrows():
-        if pd.notna(row['latitude']) and pd.notna(row['longitude']):
-            
-            file_type = row['file_type']
-            file_name = os.path.basename(row['file_path'])
-            file_url = f"/media/{file_name}"
+        if 'latitude' in row and 'longitude' in row:
+            lat = row['latitude']
+            lon = row['longitude']
+            if lat is not None and str(lat).strip() != '' and str(lat).strip() != 'nan' and lon is not None and str(lon).strip() != '' and str(lon).strip() != 'nan':
+                
+                file_type = str(row.get('file_type', 'other'))
+                file_name = os.path.basename(str(row.get('file_path', '')))
+                file_url = f"/media/{file_name}"
 
-            media_html = ""
-            if file_type == 'image':
-            # 画像を表示する<img>タグ
-                media_html = f'<img src="{file_url}" style="max-width:380px; height:auto; display:block; margin-top:10px;">'
-            elif file_type == 'video':
-            # 動画プレーヤーを表示する<video>タグ
-                media_html = f'<video controls style="width:100%; max-width:380px; display:block; margin-top:10px;"><source src="{file_url}"></video>'
-            elif file_type == 'audio':
-            # 音声プレーヤーを表示する<audio>タグ
-                media_html = f'<audio controls style="width:100%; margin-top:10px;"><source src="{file_url}"></audio>'
-        
-            # ポップアップ全体のHTMLを組み立て
-            popup_html = f"""
-            <div style="min-width:150px;">
-                <b>住所:</b> {row['address']}<br>
-                <b>種類:</b> {file_type}
+                media_html = ""
+                if file_type == 'image':
+                    # 画像を表示する<img>タグ
+                    media_html = f'<img src="{file_url}" style="max-width:380px; height:auto; display:block; margin-top:10px;">'
+                elif file_type == 'video':
+                    # 動画プレーヤーを表示する<video>タグ
+                    media_html = f'<video controls style="width:100%; max-width:380px; display:block; margin-top:10px;"><source src="{file_url}"></video>'
+                elif file_type == 'audio':
+                    # 音声プレーヤーを表示する<audio>タグ
+                    media_html = f'<audio controls style="width:100%; margin-top:10px;"><source src="{file_url}"></audio>'
             
-                {media_html}
-            
-                <div style="margin-top:10px; display:flex; justify-content:space-between;">
-                    <a href="{file_url}" download="{file_name}">ダウンロード</a>
-                    <a href="{file_url}" target="_blank">別タブで開く</a>
+                # 説明フィールドの処理
+                description = str(row.get('description', '')) if row.get('description') and str(row.get('description')).strip() != '' and str(row.get('description')).strip() != 'nan' else ''
+                description_html = f'<br><b>説明:</b> {description}' if description else ''
+                
+                # ポップアップ全体のHTMLを組み立て
+                popup_html = f"""
+                <div style="min-width:150px;">
+                    <b>住所:</b> {row.get('address', '')}<br>
+                    <b>種類:</b> {file_type}{description_html}
+                
+                    {media_html}
+                
+                    <div style="margin-top:10px; display:flex; justify-content:space-between;">
+                        <a href="{file_url}" download="{file_name}">ダウンロード</a>
+                        <a href="{file_url}" target="_blank">別タブで開く</a>
+                    </div>
                 </div>
-            </div>
-            """
-            
-            # アイコンの設定を取得
-            setting = icon_settings.get(row['file_type'], icon_settings['other'])
-            
-            marker = folium.Marker(
-                location=[row['latitude'], row['longitude']],
-                popup=folium.Popup(popup_html, max_width=400),
-                icon=folium.Icon(color=setting['color'], icon=setting['icon'], prefix='fa')
-            )
-            
-            #マーカーを marker_cluster に追加する
-            marker.add_to(marker_cluster)
+                """
+                
+                # アイコンの設定を取得
+                setting = icon_settings.get(file_type, icon_settings['other'])
+                
+                marker = folium.Marker(
+                    location=[float(lat), float(lon)],
+                    popup=folium.Popup(popup_html, max_width=400),
+                    icon=folium.Icon(color=setting['color'], icon=setting['icon'], prefix='fa')
+                )
+                
+                # マーカーを marker_cluster に追加する
+                marker.add_to(marker_cluster)
 
-    return m._repr_html_()
-
-# get_dataframe_from_csv(), os, pd などは別途インポート・定義されている必要があります。
+    # 地図のHTMLを取得
+    map_html = m._repr_html_()
+    
+    # 地図のdiv要素にIDを追加
+    map_html = map_html.replace('<div class="folium-map"', '<div class="folium-map" id="map"')
+    
+    return map_html

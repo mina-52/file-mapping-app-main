@@ -1,184 +1,296 @@
-# 📍 ファイルマッピングアプリ
+# ファイルマッピングアプリケーション
 
-ファイルと位置情報を地図上で管理できるWebアプリケーションです。
+## 📖 概要
 
-## ✨ 機能
+このアプリケーションは、ファイル（画像、動画、音声）をアップロードし、地図上で位置情報と共に管理できるDjangoベースのWebアプリケーションです。ユーザーは地図上でクリックして位置を選択でき、アップロードしたファイルを地理的な位置と共に保存・表示できます。
 
-- 📁 **ファイルアップロード**: 画像、動画、音声ファイルのアップロード
-- 🗺️ **位置情報管理**: 住所を入力して地図上にマーカー表示
-- 🎯 **インタラクティブマップ**: Foliumを使用した美しい地図表示
-- 📱 **レスポンシブデザイン**: スマホ・タブレット・PCに対応
-- 🎨 **モダンUI**: 美しいグラデーションとアニメーション
+## ✨ 主な機能
 
-## 🚀 デモ
+### 🗺️ 地図機能
+- **インタラクティブマップ**: Leaflet.jsを使用した日本地図
+- **位置選択**: 地図上をクリックして位置を選択
+- **住所自動取得**: 逆ジオコーディングで住所を自動取得
+- **マーカー表示**: アップロードされたファイルの位置をマーカーで表示
 
-![アプリのスクリーンショット](demo-screenshot.png)
+### 📁 ファイル管理
+- **多様なファイル形式対応**:
+  - 画像ファイル (jpg, png, gif, etc.)
+  - 動画ファイル (mp4, avi, mov, etc.)
+  - 音声ファイル (mp3, wav, aac, etc.)
+- **ファイルアップロード**: ドラッグ&ドロップまたはファイル選択
+- **ファイル一覧表示**: アップロードされたファイルの詳細一覧
+- **ファイルダウンロード**: アップロードされたファイルのダウンロード機能
+
+### 📝 メタデータ管理
+- **説明フィールド**: ファイルの説明を追加可能
+- **アップロード日時**: 自動的に記録
+- **位置情報**: 緯度・経度・住所を保存
+- **ファイルタイプ**: 自動判定と表示
 
 ## 🛠️ 技術スタック
 
-- **Backend**: Django 5.2.4
-- **Frontend**: HTML5, CSS3, JavaScript
-- **地図**: Folium (Leaflet.js)
-- **データ処理**: Pandas
-- **ジオコーディング**: 国土地理院API
+### バックエンド
+- **Django 5.2.4**: Webフレームワーク
+- **Python 3.x**: プログラミング言語
+- **Pandas**: データ処理・CSV操作
+- **Folium**: 地図生成
 
-## 📦 インストール
+### フロントエンド
+- **HTML5/CSS3**: マークアップ・スタイリング
+- **JavaScript**: インタラクティブ機能
+- **Leaflet.js**: 地図表示
+- **Bootstrap**: UIフレームワーク
 
-### 前提条件
-- Python 3.11以上
-- pip
+### 外部サービス
+- **地理院タイル**: 日本地図タイル
+- **Nominatim API**: 逆ジオコーディング（住所取得）
 
-### セットアップ手順
+## 📋 必要要件
 
-1. **リポジトリのクローン**
+### システム要件
+- Python 3.8以上
+- pip（Pythonパッケージマネージャー）
+- インターネット接続（地図表示・逆ジオコーディング用）
+
+### 推奨環境
+- Windows 10/11
+- 4GB以上のRAM
+- 1GB以上の空きディスク容量
+
+## 🚀 インストール手順
+
+### 1. リポジトリのクローン
 ```bash
-git clone https://github.com/yourusername/file-mapping-app.git
-cd file-mapping-app
+git clone [リポジトリURL]
+cd file-mapping-app-main
 ```
 
-2. **仮想環境の作成とアクティベート**
+### 2. 仮想環境の作成とアクティベート
 ```bash
-python -m venv venv
 # Windows
+python -m venv venv
 venv\Scripts\activate
+
 # macOS/Linux
+python3 -m venv venv
 source venv/bin/activate
 ```
 
-3. **依存関係のインストール**
+### 3. 依存関係のインストール
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **データベースのマイグレーション**
+### 4. データベースのマイグレーション
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-5. **開発サーバーの起動**
+### 5. 静的ファイルの収集
 ```bash
-python manage.py runserver
+python manage.py collectstatic --noinput
 ```
 
-6. **ブラウザでアクセス**
+### 6. 開発サーバーの起動
+```bash
+python manage.py runserver 0.0.0.0:8000
 ```
-http://127.0.0.1:8000/
+
+### 7. ブラウザでアクセス
+```
+http://localhost:8000
 ```
 
 ## 📁 プロジェクト構造
 
 ```
-file-mapping-app/
+file-mapping-app-main/
 ├── archive_app/                 # メインアプリケーション
-│   ├── static/                  # 静的ファイル
+│   ├── data/                   # データファイル
+│   │   └── uploaded_data.csv   # アップロードデータ
+│   ├── static/                 # 静的ファイル
 │   │   └── archive_app/
 │   │       └── css/
-│   │           └── style.css    # メインCSS
-│   ├── templates/               # HTMLテンプレート
+│   │           └── style.css   # カスタムCSS
+│   ├── templates/              # HTMLテンプレート
 │   │   └── archive_app/
-│   │       └── index.html       # メインページ
-│   ├── data/                    # データファイル
-│   ├── forms.py                 # フォーム定義
-│   ├── services.py              # ビジネスロジック
-│   ├── utils.py                 # ユーティリティ関数
-│   └── views.py                 # ビュー関数
-├── archive_project/             # Djangoプロジェクト設定
-│   ├── settings.py              # 開発環境設定
-│   ├── settings_production.py   # 本番環境設定
-│   └── urls.py                  # URL設定
-├── media/                       # アップロードされたファイル
-├── requirements.txt             # Python依存関係
-├── Procfile                     # Herokuデプロイ設定
-└── README.md                    # このファイル
+│   │       ├── index.html      # メインページ
+│   │       └── file_list.html  # ファイル一覧ページ
+│   ├── forms.py               # フォーム定義
+│   ├── models.py              # データモデル
+│   ├── services.py            # ビジネスロジック
+│   ├── utils.py               # ユーティリティ関数
+│   └── views.py               # ビュー関数
+├── archive_project/            # Djangoプロジェクト設定
+│   ├── settings.py            # プロジェクト設定
+│   ├── urls.py                # URL設定
+│   └── wsgi.py                # WSGI設定
+├── media/                     # アップロードファイル保存先
+├── staticfiles/               # 収集された静的ファイル
+├── manage.py                  # Django管理スクリプト
+├── requirements.txt           # Python依存関係
+└── README.md                  # このファイル
 ```
 
-## 🌐 デプロイ
+## 🎯 使用方法
 
-### Herokuでのデプロイ
+### ファイルのアップロード
 
-1. **Herokuアカウント作成**
-   - [Heroku](https://heroku.com) でアカウントを作成
+1. **メインページにアクセス**
+   - ブラウザで `http://localhost:8000` を開く
 
-2. **Heroku CLIのインストール**
-   ```bash
-   # Windows
-   winget install --id=Heroku.HerokuCLI
-   
-   # macOS
-   brew tap heroku/brew && brew install heroku
-   ```
+2. **ファイルを選択**
+   - 「ファイルを選択」ボタンをクリック
+   - またはファイルをドラッグ&ドロップ
 
-3. **Herokuにログイン**
-   ```bash
-   heroku login
-   ```
+3. **位置を選択**
+   - 地図上をクリックして位置を選択
+   - 住所が自動的に入力される
 
-4. **アプリの作成**
-   ```bash
-   heroku create your-app-name
-   ```
+4. **説明を追加**（オプション）
+   - ファイルの説明を入力
 
-5. **PostgreSQLアドオンの追加**
-   ```bash
-   heroku addons:create heroku-postgresql:mini
-   ```
+5. **アップロード**
+   - 「アップロード」ボタンをクリック
 
-6. **環境変数の設定**
-   ```bash
-   heroku config:set DEBUG=False
-   heroku config:set ALLOWED_HOSTS=your-app-name.herokuapp.com
-   ```
+### ファイルの閲覧
 
-7. **デプロイ**
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   git push heroku main
-   ```
+#### 地図上での閲覧
+- メインページの地図上にマーカーが表示される
+- マーカーをクリックするとファイルの詳細が表示される
+- ファイルのプレビュー、ダウンロード、別タブでの表示が可能
 
-8. **データベースのマイグレーション**
-   ```bash
-   heroku run python manage.py migrate
-   ```
+#### ファイル一覧での閲覧
+- ナビゲーションの「ファイル一覧」をクリック
+- アップロードされたファイルの詳細一覧を表示
+- ファイル名、種類、説明、住所、アップロード日時を確認可能
 
 ## 🔧 設定
 
-### 環境変数
+### 環境変数（オプション）
+```bash
+# 開発環境
+DEBUG=True
+SECRET_KEY=your-secret-key
 
-- `DEBUG`: デバッグモード（True/False）
-- `ALLOWED_HOSTS`: 許可されたホスト（カンマ区切り）
-- `DATABASE_URL`: データベースURL（Heroku自動設定）
+# 本番環境
+DEBUG=False
+SECRET_KEY=your-production-secret-key
+```
 
-### カスタマイズ
+### 地図設定
+- **初期表示**: 日本の地理的中心
+- **ズームレベル**: 5（初期値）
+- **地図タイル**: 地理院タイル（標準地図）
 
-- **地図の初期位置**: `services.py`の`create_map_html()`関数で変更
-- **ファイルサイズ制限**: `settings.py`で`DATA_UPLOAD_MAX_MEMORY_SIZE`を設定
-- **対応ファイル形式**: `forms.py`の`choices`で変更
+### ファイル設定
+- **最大ファイルサイズ**: 10MB
+- **対応形式**: 画像、動画、音声ファイル
+- **保存先**: `media/` ディレクトリ
 
-## 🤝 コントリビューション
+## 🐛 トラブルシューティング
 
-1. このリポジトリをフォーク
-2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
-5. プルリクエストを作成
+### よくある問題
+
+#### 1. 地図が表示されない
+- **原因**: インターネット接続の問題
+- **解決策**: インターネット接続を確認
+
+#### 2. ファイルアップロードエラー
+- **原因**: ファイルサイズが大きすぎる
+- **解決策**: 10MB以下のファイルを使用
+
+#### 3. 住所が取得できない
+- **原因**: 逆ジオコーディングAPIの制限
+- **解決策**: しばらく待ってから再試行
+
+#### 4. マーカーが表示されない
+- **原因**: CSVファイルの構造エラー
+- **解決策**: アプリケーションを再起動
+
+### ログの確認
+```bash
+# 開発サーバーのログを確認
+python manage.py runserver 0.0.0.0:8000
+```
+
+## 📊 データ管理
+
+### CSVファイル構造
+```csv
+file_path,file_type,description,address,latitude,longitude,upload_date
+```
+
+### データのバックアップ
+```bash
+# CSVファイルのバックアップ
+cp archive_app/data/uploaded_data.csv backup/
+```
+
+### データの復元
+```bash
+# CSVファイルの復元
+cp backup/uploaded_data.csv archive_app/data/
+```
+
+## 🔒 セキュリティ
+
+### 推奨事項
+- 本番環境では `DEBUG=False` を設定
+- 強力な `SECRET_KEY` を使用
+- HTTPS通信を有効化
+- ファイルアップロードの制限を設定
+
+### 注意事項
+- このアプリケーションは開発・学習用途です
+- 本番環境での使用には追加のセキュリティ対策が必要です
+
+## 🤝 貢献
+
+### バグ報告
+- GitHubのIssuesでバグを報告
+- 再現手順を詳細に記載
+
+### 機能要望
+- GitHubのIssuesで機能要望を提案
+- 使用例やメリットを説明
+
+### プルリクエスト
+- フォークしてブランチを作成
+- 変更内容を明確に説明
+- テストを実行してからプルリクエスト
 
 ## 📄 ライセンス
 
-このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
-
-## 🙏 謝辞
-
-- [Django](https://www.djangoproject.com/) - Webフレームワーク
-- [Folium](https://python-visualization.github.io/folium/) - 地図ライブラリ
-- [国土地理院](https://maps.gsi.go.jp/) - 地図タイルとジオコーディングAPI
-- [Font Awesome](https://fontawesome.com/) - アイコン
+このプロジェクトはMITライセンスの下で公開されています。
 
 ## 📞 サポート
 
-問題や質問がある場合は、[Issues](https://github.com/yourusername/file-mapping-app/issues)でお知らせください。
+### 質問・相談
+- GitHubのIssuesで質問
+- 詳細な情報を提供
+
+### ドキュメント
+- このREADMEファイル
+- コード内のコメント
+- Django公式ドキュメント
+
+## 🔄 更新履歴
+
+### v1.0.0 (2025-07-15)
+- 初回リリース
+- 基本的なファイルアップロード機能
+- 地図上での位置選択機能
+- ファイル一覧表示機能
+
+## 🙏 謝辞
+
+- **Django**: Webフレームワーク
+- **Leaflet.js**: 地図表示ライブラリ
+- **地理院**: 地図タイル提供
+- **OpenStreetMap**: 地理データ提供
 
 ---
 
-⭐ このプロジェクトが役に立ったら、スターを付けてください！ 
+**注意**: このアプリケーションは教育・学習目的で作成されています。本番環境での使用には十分なテストとセキュリティ対策が必要です。 
