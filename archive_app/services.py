@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import folium
 from folium.plugins import MarkerCluster
+from supabase import create_client
 
 CSV_FILE = os.path.join(os.path.dirname(__file__), 'data', 'uploaded_data.csv')
 CSV_COLUMNS = ['file_path', 'file_type', 'description', 'address', 'latitude', 'longitude', 'upload_date']
@@ -176,3 +177,19 @@ def create_map_html() -> str:
     map_html = map_html.replace('<div class="folium-map"', '<div class="folium-map" id="map"')
     
     return map_html
+
+def upload_file_to_supabase_storage(local_file, storage_file_name):
+    """
+    Supabase Storageにファイルをアップロードし、公開URLを返す
+    """
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+    if not supabase_url or not supabase_key:
+        raise Exception("Supabaseの環境変数が設定されていません")
+    supabase = create_client(supabase_url, supabase_key)
+    # ファイルをバイト列に変換してアップロード
+    file_bytes = local_file.read()
+    res = supabase.storage.from_("file-mapping-bucket").upload(storage_file_name, file_bytes)
+    # 公開URLを取得
+    public_url = supabase.storage.from_("file-mapping-bucket").get_public_url(storage_file_name)
+    return public_url

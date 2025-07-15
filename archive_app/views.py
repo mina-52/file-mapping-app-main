@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse
 from .forms import UploadForm
-from .services import add_data_to_csv, create_map_html, get_dataframe_from_csv
+from .services import add_data_to_csv, create_map_html, get_dataframe_from_csv, upload_file_to_supabase_storage
 from .utils import geocode_address, reverse_geocode
 from django.conf import settings
 import os
@@ -13,12 +13,11 @@ def map_view(request):
     if request.method == 'POST':
         form = UploadForm(request.POST, request.FILES)
         if form.is_valid():
-            # 1. ファイルを保存
+            # 1. ファイルをSupabase Storageに保存
             uploaded_file = request.FILES['file']
-            fs = FileSystemStorage()
-            # ファイル名が重複しないように保存
-            filename = fs.save(uploaded_file.name, uploaded_file)
-            file_path = fs.path(filename)
+            storage_file_name = uploaded_file.name
+            public_url = upload_file_to_supabase_storage(uploaded_file, storage_file_name)
+            file_path = public_url
 
             # 2. 位置情報の取得
             lat = form.cleaned_data.get('latitude')

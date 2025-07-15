@@ -1,0 +1,14 @@
+# Django Settings
+SECRET_KEY=django-insecure-j%)np(faguein(=1bu!4&8hx4#+rrp7g6+_+(w1zch)(00d6gn
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+
+# Supabase Database Configuration
+# 以下の形式で設定してください：
+# DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+DATABASE_URL=
+
+# Optional: Supabase API Keys (if you want to use Supabase Auth or Storage)
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY= 
