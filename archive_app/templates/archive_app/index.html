@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ファイルマッピングアプリ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'archive_app/css/style.css' %}">
+</head>
+<body>
+    <header class="header">
+        <h1>ファイルマッピングアプリ</h1>
+        <p class="subtitle">ファイルと位置情報を地図上で管理</p>
+    </header>
+
+    <div class="container">
+        <div class="form-section">
+            <h2>ファイルアップロード</h2>
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="{{ form.file.id_for_label }}">
+                        <i class="fas fa-file-upload"></i> ファイルを選択
+                    </label>
+                    <div class="file-upload-area" onclick="document.getElementById('{{ form.file.id_for_label }}').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>クリックしてファイルを選択</p>
+                        <small>画像、動画、音声ファイルに対応</small>
+                    </div>
+                    {{ form.file }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.file_type.id_for_label }}">
+                        <i class="fas fa-tag"></i> ファイルの種類
+                    </label>
+                    {{ form.file_type }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.address.id_for_label }}">
+                        <i class="fas fa-map-marker-alt"></i> 住所
+                    </label>
+                    {{ form.address }}
+                    <small>例: 東京都渋谷区渋谷2-21-1</small>
+                </div>
+
+                <button type="submit" class="btn">
+                    <i class="fas fa-upload"></i>
+                    <span>アップロードして地図に表示</span>
+                </button>
+            </form>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="status {% if message.tags %}{{ message.tags }}{% endif %}">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="map-section">
+            <h2>インタラクティブマップ</h2>
+            <div id="map">
+                {{ map_html|safe }}
+            </div>
+            <div class="map-info">
+                <p><i class="fas fa-info-circle"></i> マーカーをクリックしてファイルを確認</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ファイル選択時の表示更新
+        document.getElementById('{{ form.file.id_for_label }}').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const uploadArea = document.querySelector('.file-upload-area');
+            
+            if (file) {
+                uploadArea.innerHTML = `
+                    <i class="fas fa-file"></i>
+                    <p><strong>${file.name}</strong></p>
+                    <small>${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                `;
+                uploadArea.style.background = 'rgba(40, 167, 69, 0.1)';
+                uploadArea.style.borderColor = '#28a745';
+            }
+        });
+
+        // フォーム送信時のローディング表示
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<span class="loading"></span> アップロード中...';
+            btn.disabled = true;
+            
+            // 5秒後にボタンを元に戻す（エラー時の対策）
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 5000);
+        });
+
+        // 住所入力の自動補完（簡易版）
+        const addressInput = document.getElementById('{{ form.address.id_for_label }}');
+        addressInput.addEventListener('focus', function() {
+            this.style.borderColor = '#667eea';
+        });
+        
+        addressInput.addEventListener('blur', function() {
+            this.style.borderColor = '#e1e5e9';
+        });
+    </script>
+</body>
+</html>
