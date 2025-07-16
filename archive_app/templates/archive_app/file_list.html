@@ -216,7 +216,7 @@
 
             <!-- ファイル一覧 -->
             {% for file in files %}
-                <div class="file-item">
+                <div class="file-item" id="file-{{ file.file_name }}">
                     <div class="file-header">
                         <div class="file-info">
                             <div class="file-name">
@@ -252,12 +252,25 @@
                         </div>
                     {% endif %}
 
+                    <div class="file-preview" style="margin: 16px 0;">
+                        {% if file.file_type == 'image' %}
+                            <img src="{{ file.file_url }}" alt="{{ file.file_name }}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                        {% elif file.file_type == 'video' %}
+                            <video controls style="width: 100%; max-width: 480px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                                <source src="{{ file.file_url }}">
+                                お使いのブラウザは video タグに対応していません。
+                            </video>
+                        {% elif file.file_type == 'audio' %}
+                            <audio controls style="width: 100%; max-width: 480px;">
+                                <source src="{{ file.file_url }}">
+                                お使いのブラウザは audio タグに対応していません。
+                            </audio>
+                        {% endif %}
+                    </div>
+
                     <div class="file-actions">
-                        <a href="{{ file.file_url }}" download="{{ file.file_name }}" class="btn-download">
+                        <a href="{% url 'download_file' %}?url={{ file.file_url|urlencode }}&filename={{ file.file_name|urlencode }}" class="btn-download">
                             <i class="fas fa-download"></i> ダウンロード
-                        </a>
-                        <a href="{{ file.file_url }}" target="_blank" class="btn-view">
-                            <i class="fas fa-external-link-alt"></i> 別タブで開く
                         </a>
                         {% if file.latitude and file.longitude %}
                             <a href="{% url 'map_view' %}#{{ file.latitude }},{{ file.longitude }}" class="btn-map">

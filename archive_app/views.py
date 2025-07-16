@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 from .forms import UploadForm
 from .services import add_data_to_csv, create_map_html, get_dataframe_from_csv, upload_file_to_supabase_storage
 from .utils import geocode_address, reverse_geocode
@@ -8,6 +8,8 @@ from django.conf import settings
 import os
 import pandas as pd
 from datetime import datetime
+import requests
+import urllib.parse
 
 def map_view(request):
     if request.method == 'POST':
@@ -141,7 +143,7 @@ def file_list(request):
                     'latitude': lat,
                     'longitude': lon,
                     'upload_date': str(row.get('upload_date', '')) if row.get('upload_date') and str(row.get('upload_date')).strip() != '' and str(row.get('upload_date')).strip() != 'nan' else '',
-                    'file_url': f"/media/{os.path.basename(str(row.get('file_path', '')))}"
+                    'file_url': str(row.get('file_path', ''))
                 })
             except Exception as e:
                 print(f"ファイル処理エラー: {e}")
@@ -161,3 +163,27 @@ def file_list(request):
             'error': str(e)
         }
         return render(request, 'archive_app/file_list.html', context)
+
+def download_file(request):
+    """
+    SupabaseのパブリックURLからファイルを取得し、ダウンロードレスポンスとして返す
+    """
+    file_url = request.GET.get('url')
+    filename = request.GET.get('filename')
+    if not file_url:
+        return HttpResponse('URLが指定されていません'.encode('utf-8'), status=400)
+    file_url = urllib.parse.unquote(file_url)
+    if not filename:
+        # URLの最後の/以降をファイル名として利用
+        parsed_url = urllib.parse.urlparse(file_url)
+        filename = os.path.basename(parsed_url.path)
+    try:
+        r = requests.get(file_url, stream=True)
+        r.raise_for_status()
+        response = StreamingHttpResponse(r.iter_content(chunk_size=8192), content_type=r.headers.get('Content-Type', 'application/octet-stream'))
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        if 'Content-Length' in r.headers:
+            response['Content-Length'] = r.headers['Content-Length']
+        return response
+    except Exception as e:
+        return HttpResponse(f'ダウンロードエラー: {e}'.encode('utf-8'), status=500)

@@ -3,6 +3,7 @@ import os
 import folium
 from folium.plugins import MarkerCluster
 from supabase import create_client
+import urllib.parse
 
 CSV_FILE = os.path.join(os.path.dirname(__file__), 'data', 'uploaded_data.csv')
 CSV_COLUMNS = ['file_path', 'file_type', 'description', 'address', 'latitude', 'longitude', 'upload_date']
@@ -126,34 +127,32 @@ def create_map_html() -> str:
                 
                 file_type = str(row.get('file_type', 'other'))
                 file_name = os.path.basename(str(row.get('file_path', '')))
-                file_url = f"/media/{file_name}"
+                file_url = str(row.get('file_path', ''))
 
                 media_html = ""
                 if file_type == 'image':
-                    # 画像を表示する<img>タグ
                     media_html = f'<img src="{file_url}" style="max-width:380px; height:auto; display:block; margin-top:10px;">'
                 elif file_type == 'video':
-                    # 動画プレーヤーを表示する<video>タグ
                     media_html = f'<video controls style="width:100%; max-width:380px; display:block; margin-top:10px;"><source src="{file_url}"></video>'
                 elif file_type == 'audio':
-                    # 音声プレーヤーを表示する<audio>タグ
                     media_html = f'<audio controls style="width:100%; margin-top:10px;"><source src="{file_url}"></audio>'
             
                 # 説明フィールドの処理
                 description = str(row.get('description', '')) if row.get('description') and str(row.get('description')).strip() != '' and str(row.get('description')).strip() != 'nan' else ''
                 description_html = f'<br><b>説明:</b> {description}' if description else ''
                 
+                # ファイル一覧ページの該当ファイルへのアンカーリンクを生成
+                file_list_url = f"/files/#file-{urllib.parse.quote(file_name)}"
                 # ポップアップ全体のHTMLを組み立て
                 popup_html = f"""
                 <div style="min-width:150px;">
                     <b>住所:</b> {row.get('address', '')}<br>
                     <b>種類:</b> {file_type}{description_html}
-                
+
                     {media_html}
-                
-                    <div style="margin-top:10px; display:flex; justify-content:space-between;">
-                        <a href="{file_url}" download="{file_name}">ダウンロード</a>
-                        <a href="{file_url}" target="_blank">別タブで開く</a>
+
+                    <div style="margin-top:10px; display:flex; flex-direction:column; gap:4px;">
+                        <a href="{file_list_url}" target="_blank" class="btn-view">ファイル一覧で見る</a>
                     </div>
                 </div>
                 """
