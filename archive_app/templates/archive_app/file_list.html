@@ -216,7 +216,7 @@
 
             <!-- ファイル一覧 -->
             {% for file in files %}
-                <div class="file-item" id="file-{{ file.file_name }}">
+                <div class="file-item" id="file-{{ file.file_name|urlencode }}">
                     <div class="file-header">
                         <div class="file-info">
                             <div class="file-name">

@@ -105,21 +105,21 @@
                         <p>クリックしてファイルを選択</p>
                         <small>画像、動画、音声ファイルに対応</small>
                     </div>
-                    {{ form.file }}
+                    {{ form.file.as_widget }}
                 </div>
 
                 <div class="form-group">
                     <label for="{{ form.file_type.id_for_label }}">
                         <i class="fas fa-tag"></i> ファイルの種類
                     </label>
-                    {{ form.file_type }}
+                    {{ form.file_type.as_widget }}
                 </div>
 
                 <div class="form-group">
                     <label for="{{ form.description.id_for_label }}">
                         <i class="fas fa-comment"></i> 説明（オプション）
                     </label>
-                    {{ form.description }}
+                    {{ form.description.as_widget }}
                     <small>ファイルの説明やメモを入力してください</small>
                 </div>
 
@@ -127,7 +127,7 @@
                     <label for="{{ form.address.id_for_label }}">
                         <i class="fas fa-map-marker-alt"></i> 住所（オプション）
                     </label>
-                    {{ form.address }}
+                    {{ form.address.as_widget }}
                     <small>地図上でクリックするか、手動で入力してください</small>
                 </div>
 
@@ -367,8 +367,7 @@
                         <b>住所:</b> ${data.address || '不明'}<br>
                         <b>種類:</b> ${data.file_type}${description}
                         <div style="margin-top:10px;">
-                            <a href="/media/${data.file_name}" download>ダウンロード</a> |
-                            <a href="/media/${data.file_name}" target="_blank">別タブで開く</a>
+                            <a href="/files/#file-${encodeURIComponent(data.file_name)}" target="_blank">詳細を見る</a>
                         </div>
                     </div>
                 `;
