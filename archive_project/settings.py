@@ -89,14 +89,16 @@ WSGI_APPLICATION = 'archive_project.wsgi.application'
 # Check if we're in production (Supabase) or development (SQLite)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if DATABASE_URL and not DEBUG:
-    # Production: Use Supabase PostgreSQL
+if DATABASE_URL:
+    # Use Supabase PostgreSQL (both development and production)
     try:
         import dj_database_url
         DATABASES = {
             'default': dj_database_url.parse(DATABASE_URL)
         }
+        print(f"✅ Using Supabase PostgreSQL: {DATABASE_URL[:50]}...")
     except ImportError:
+        print("❌ dj_database_url not found, install it with: pip install dj-database-url")
         # Fallback to SQLite if dj_database_url is not available
         DATABASES = {
             'default': {
@@ -106,6 +108,7 @@ if DATABASE_URL and not DEBUG:
         }
 else:
     # Development: Use SQLite
+    print("ℹ️  Using SQLite database")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
