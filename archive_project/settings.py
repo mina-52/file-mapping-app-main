@@ -106,6 +106,8 @@ if DATABASE_URL:
                 'NAME': '/tmp/db.sqlite3' if VERCEL else BASE_DIR / 'db.sqlite3',
             }
         }
+    DATABASES['default']['ENGINE'] = 'django_pg8000' 
+
 else:
     # Development: Use SQLite
     print("ℹ️  Using SQLite database")
@@ -115,6 +117,7 @@ else:
             'NAME': '/tmp/db.sqlite3' if VERCEL else BASE_DIR / 'db.sqlite3',
         }
     }
+
 
 
 # Password validation

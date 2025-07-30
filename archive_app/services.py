@@ -24,6 +24,8 @@ def add_data_to_csv(data: dict):
     if 'upload_date' not in data:
         data['upload_date'] = ''
     
+    os.makedirs(os.path.dirname(CSV_FILE), exist_ok=True)
+
     df_new = pd.DataFrame([data])
     if not os.path.exists(CSV_FILE):
         df_new.to_csv(CSV_FILE, index=False, header=True, encoding='utf-8-sig')
