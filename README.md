@@ -59,13 +59,15 @@
 
 ## 🚀 インストール手順
 
-### 1. リポジトリのクローン
+### ローカル開発環境
+
+#### 1. リポジトリのクローン
 ```bash
 git clone [リポジトリURL]
 cd file-mapping-app-main
 ```
 
-### 2. 仮想環境の作成とアクティベート
+#### 2. 仮想環境の作成とアクティベート
 ```bash
 # Windows
 python -m venv venv
@@ -76,31 +78,63 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. 依存関係のインストール
+#### 3. 依存関係のインストール
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. データベースのマイグレーション
+#### 4. データベースのマイグレーション
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 5. 静的ファイルの収集
+#### 5. 静的ファイルの収集
 ```bash
 python manage.py collectstatic --noinput
 ```
 
-### 6. 開発サーバーの起動
+#### 6. 開発サーバーの起動
 ```bash
 python manage.py runserver 0.0.0.0:8000
 ```
 
-### 7. ブラウザでアクセス
+#### 7. ブラウザでアクセス
 ```
 http://localhost:8000
 ```
+
+### Renderへのデプロイ
+
+#### 1. Renderアカウントの作成
+- [Render](https://render.com) にアクセスしてアカウントを作成
+- GitHubアカウントでログインすることを推奨
+
+#### 2. リポジトリの準備
+- このプロジェクトをGitHubリポジトリにプッシュ
+- 以下のファイルが含まれていることを確認：
+  - `render.yaml`
+  - `build.sh`
+  - `requirements.txt`
+
+#### 3. Renderでのデプロイ
+1. Renderダッシュボードで「New +」をクリック
+2. 「Blueprint」を選択
+3. GitHubリポジトリを接続
+4. `render.yaml`ファイルを自動検出
+5. 「Apply」をクリックしてデプロイ開始
+
+#### 4. 環境変数の設定
+デプロイ後、以下の環境変数が自動的に設定されます：
+- `SECRET_KEY`: 自動生成
+- `DATABASE_URL`: Render PostgreSQLから自動設定
+- `DEBUG`: False
+- `ALLOWED_HOSTS`: .onrender.com
+
+#### 5. アプリケーションの確認
+- デプロイ完了後、提供されたURLでアプリケーションにアクセス
+- データベースマイグレーションが自動実行される
+- 静的ファイルが自動収集される
 
 ## 📁 プロジェクト構造
 
@@ -130,6 +164,8 @@ file-mapping-app-main/
 ├── staticfiles/               # 収集された静的ファイル
 ├── manage.py                  # Django管理スクリプト
 ├── requirements.txt           # Python依存関係
+├── build.sh                   # Render用ビルドスクリプト
+├── render.yaml                # Render設定ファイル
 └── README.md                  # このファイル
 ```
 

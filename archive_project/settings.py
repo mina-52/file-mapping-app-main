@@ -30,11 +30,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-j%)np(faguein(=1bu!4&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-# Vercel環境の検出
-VERCEL = os.environ.get('VERCEL', 'False') == 'True'
+# Render環境の検出
+RENDER = os.environ.get('RENDER', 'False') == 'True'
 
 # ALLOWED_HOSTS設定
-if VERCEL:
+if RENDER:
     ALLOWED_HOSTS = ['*']
 else:
     ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
@@ -90,7 +90,7 @@ WSGI_APPLICATION = 'archive_project.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL and not DEBUG:
-    # Production: Use Supabase PostgreSQL
+    # Production: Use Render PostgreSQL
     try:
         import dj_database_url
         DATABASES = {
@@ -101,7 +101,7 @@ if DATABASE_URL and not DEBUG:
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': '/tmp/db.sqlite3' if VERCEL else BASE_DIR / 'db.sqlite3',
+                'NAME': '/tmp/db.sqlite3' if RENDER else BASE_DIR / 'db.sqlite3',
             }
         }
 else:
@@ -109,7 +109,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': '/tmp/db.sqlite3' if VERCEL else BASE_DIR / 'db.sqlite3',
+            'NAME': '/tmp/db.sqlite3' if RENDER else BASE_DIR / 'db.sqlite3',
         }
     }
 
