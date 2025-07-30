@@ -86,7 +86,7 @@ WSGI_APPLICATION = 'archive_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Check if we're in production (Supabase) or development (SQLite)
+# Check if we're in production (Render) or development (SQLite)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL and not DEBUG:
@@ -95,6 +95,10 @@ if DATABASE_URL and not DEBUG:
         import dj_database_url
         DATABASES = {
             'default': dj_database_url.parse(DATABASE_URL)
+        }
+        # Add SSL configuration for Render
+        DATABASES['default']['OPTIONS'] = {
+            'sslmode': 'require'
         }
     except ImportError:
         # Fallback to SQLite if dj_database_url is not available
@@ -134,7 +138,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 #ファイル保存
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+if RENDER:
+    MEDIA_ROOT = '/tmp/media'
+else:
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -157,7 +164,33 @@ STATICFILES_DIRS = [
     BASE_DIR / 'archive_app' / 'static',
 ]
 
+# WhiteNoise configuration for static files
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
