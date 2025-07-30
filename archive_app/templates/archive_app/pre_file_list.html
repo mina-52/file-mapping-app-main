@@ -1,0 +1,302 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ファイル一覧 - ファイルマッピングアプリ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'archive_app/css/style.css' %}">
+    <style>
+        .nav-links {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .nav-links a {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 0 10px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover {
+            background: #5a6fd8;
+        }
+        
+        .file-list {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .file-item {
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s;
+        }
+        
+        .file-item:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .file-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .file-type-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .file-type-image { background: #e3f2fd; color: #1976d2; }
+        .file-type-video { background: #ffebee; color: #d32f2f; }
+        .file-type-audio { background: #e8f5e8; color: #388e3c; }
+        .file-type-other { background: #f3e5f5; color: #7b1fa2; }
+        
+        .file-description {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .file-location {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .file-actions a {
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+        
+        .btn-download {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-download:hover {
+            background: #218838;
+        }
+        
+        .btn-view {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-view:hover {
+            background: #138496;
+        }
+        
+        .btn-map {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-map:hover {
+            background: #e0a800;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state i {
+            font-size: 4em;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>ファイル一覧</h1>
+        <p class="subtitle">アップロードされたファイルの詳細情報</p>
+    </header>
+
+    <div class="nav-links">
+        <a href="{% url 'map_view' %}"><i class="fas fa-map"></i> 地図表示</a>
+        <a href="{% url 'file_list' %}"><i class="fas fa-list"></i> ファイル一覧</a>
+    </div>
+
+    <div class="file-list">
+        {% if files %}
+            <!-- 統計情報 -->
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">{{ files|length }}</div>
+                    <div class="stat-label">総ファイル数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">
+                        {% regroup files by file_type as file_type_list %}
+                        {{ file_type_list|length }}
+                    </div>
+                    <div class="stat-label">ファイル種類数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">
+                        {% regroup files by address as address_list %}
+                        {{ address_list|length }}
+                    </div>
+                    <div class="stat-label">登録場所数</div>
+                </div>
+            </div>
+
+            <!-- ファイル一覧 -->
+            {% for file in files %}
+                <div class="file-item" id="file-{{ file.file_name|urlencode }}">
+                    <div class="file-header">
+                        <div class="file-info">
+                            <div class="file-name">
+                                {{ file.file_name }}
+                                <span class="file-type-badge file-type-{{ file.file_type }}">
+                                    {% if file.file_type == 'image' %}画像
+                                    {% elif file.file_type == 'video' %}動画
+                                    {% elif file.file_type == 'audio' %}音声
+                                    {% else %}その他
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="file-meta">
+                                <i class="fas fa-calendar"></i> {{ file.upload_date }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if file.description %}
+                        <div class="file-description">
+                            <strong><i class="fas fa-comment"></i> 説明:</strong><br>
+                            {{ file.description }}
+                        </div>
+                    {% endif %}
+
+                    {% if file.address %}
+                        <div class="file-location">
+                            <strong><i class="fas fa-map-marker-alt"></i> 場所:</strong><br>
+                            {{ file.address }}
+                            {% if file.latitude and file.longitude %}
+                                <br><small>座標: {{ file.latitude|floatformat:6 }}, {{ file.longitude|floatformat:6 }}</small>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <div class="file-preview" style="margin: 16px 0;">
+                        {% if file.file_type == 'image' %}
+                            <img src="{{ file.file_url }}" alt="{{ file.file_name }}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                        {% elif file.file_type == 'video' %}
+                            <video controls style="width: 100%; max-width: 480px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                                <source src="{{ file.file_url }}">
+                                お使いのブラウザは video タグに対応していません。
+                            </video>
+                        {% elif file.file_type == 'audio' %}
+                            <audio controls style="width: 100%; max-width: 480px;">
+                                <source src="{{ file.file_url }}">
+                                お使いのブラウザは audio タグに対応していません。
+                            </audio>
+                        {% endif %}
+                    </div>
+
+                    <div class="file-actions">
+                        <a href="{% url 'download_file' %}?url={{ file.file_url|urlencode }}&filename={{ file.file_name|urlencode }}" class="btn-download">
+                            <i class="fas fa-download"></i> ダウンロード
+                        </a>
+                        {% if file.latitude and file.longitude %}
+                            <a href="{% url 'map_view' %}#{{ file.latitude }},{{ file.longitude }}" class="btn-map">
+                                <i class="fas fa-map"></i> 地図で見る
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-folder-open"></i>
+                <h3>ファイルがありません</h3>
+                <p>まだファイルがアップロードされていません。</p>
+                <a href="{% url 'map_view' %}" class="btn" style="margin-top: 20px;">
+                    <i class="fas fa-upload"></i> ファイルをアップロード
+                </a>
+            </div>
+        {% endif %}
+
+        {% if error %}
+            <div class="status error">
+                <i class="fas fa-exclamation-circle"></i>
+                エラーが発生しました: {{ error }}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html> 

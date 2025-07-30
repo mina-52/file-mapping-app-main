@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.utils import timezone # 日付を扱うために追加
+import os
 
 class Archive(models.Model):
     # ファイルの種類（画像、動画など）
@@ -25,6 +26,11 @@ class Archive(models.Model):
     # 登録日（自動で現在日時が記録される）
     created_at = models.DateTimeField(default=timezone.now)
 
+    @property
+    def file_name(self):
+        # ファイルパスからファイル名を抽出
+        return os.path.basename(self.file_path)
+    
     def __str__(self):
         # 管理サイトなどで表示されるときの名前
         return f"{self.description[:20]} at {self.address}"
