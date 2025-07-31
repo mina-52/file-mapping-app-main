@@ -49,18 +49,18 @@ services:
       - key: DATABASE_URL
         # ここにあなたのSupabaseデータベース接続URIを貼り付けてください。
         # 例: postgresql://postgres:[YOUR_PASSWORD]@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres
-        value: "postgresql://postgres.ccjipkceqlrnqbcifjjl:yuya1652@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
+        value: "postgresql://postgres.ccjipkceqlrnqbcifjjl:yuya16522@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
 
       - key: SUPABASE_URL
         # あなたのSupabaseプロジェクトのURL (例: https://[PROJECT_REF].supabase.co)
         # Supabaseダッシュボードの「Project Settings」->「API」で確認できます。
-        value: "https://ccjipkceqlrnqbcifjjl.supabase.co" # <-- ★ここをあなたのSupabase API URLに置き換えてください★
+        value: "https://eyvsigeoygzrwqnrgvdg.supabase.co" # <-- ★ここをあなたのSupabase API URLに置き換えてください★
 
       - key: SUPABASE_ANON_KEY
         # あなたのSupabase Service Role Key。
         # Supabaseダッシュボードの「Project Settings」->「API」で確認できます。
         # このキーは絶対に公開しないでください！
-        value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjamlwa2NlcWxybnFiY2lmampsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NDIxNTgsImV4cCI6MjA2ODExODE1OH0.owVmuaG3no1dxJYbGIGoakr1NcW-jFvAMPsO9QHsEeI" # <-- ★ここをあなたのSupabase Service Role Keyに置き換えてください★
+        value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5dnNpZ2VveWd6cndxbnJndmRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5MzQ1OTUsImV4cCI6MjA2OTUxMDU5NX0.BEKpNHDYEsaOdZNC1FIRvZC-quo9aCOebasqTuhm_8Q" # <-- ★ここをあなたのSupabase Service Role Keyに置き換えてください★
 
       - key: ALLOWED_HOSTS
         value: ".onrender.com"
