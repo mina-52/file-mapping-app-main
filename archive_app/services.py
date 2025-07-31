@@ -182,7 +182,7 @@ def upload_file_to_supabase_storage(local_file, storage_file_name):
     Supabase Storageにファイルをアップロードし、公開URLを返す
     """
     supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
     if not supabase_url or not supabase_key:
         raise Exception("Supabaseの環境変数が設定されていません")
     supabase = create_client(supabase_url, supabase_key)
