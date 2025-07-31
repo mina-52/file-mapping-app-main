@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import sys
 
 # Load environment variables from .env file
 load_dotenv()
@@ -109,7 +110,28 @@ else:
         }
     }
 
+# --- START DIAGNOSTIC BLOCK ---
+# Renderの環境変数をデバッグするためのブロック
+print("--- STARTING DIAGNOSTICS ---")
+database_url = os.environ.get('DATABASE_URL')
+supabase_url = os.environ.get('SUPABASE_URL')
+supabase_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
 
+# os.environ.get()が何を取得しているか、ブール値でログに出力
+print(f"DATABASE_URL is set: {bool(database_url)}")
+print(f"SUPABASE_URL is set: {bool(supabase_url)}")
+print(f"SUPABASE_SERVICE_ROLE_KEY is set: {bool(supabase_key)}")
+
+# 本番環境（Render）でDATABASE_URLがなければ、SQLiteに頼らずに意図的にデプロイを失敗させる
+IS_PRODUCTION = "gunicorn" in sys.argv[0]
+print(f"Running in production (gunicorn): {IS_PRODUCTION}")
+
+if IS_PRODUCTION and not database_url:
+    print("FATAL ERROR: DATABASE_URL is not set in the production environment!")
+    sys.exit(1) # これでビルドが明確に失敗する
+
+print("--- ENDING DIAGNOSTICS ---")
+# --- END DIAGNOSTIC BLOCK ---
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
