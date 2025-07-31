@@ -9,3 +9,4 @@ psycopg2-binary
 storage3 
 whitenoise 
 supabase
+django-pg8000
