@@ -7,7 +7,7 @@ services:
     plan: free
 
     # Gitリポジトリのブランチ。あなたのデプロイしたいブランチ名に変更してください。
-    branch: main
+    branch: yuya2
 
     # アプリケーションのルートディレクトリ。リポジトリのルートにDjangoプロジェクトがある場合は空のままでOKです。
     # rootDirectory: backend # 例: もしDjangoプロジェクトがリポジトリの 'backend/' ディレクトリにある場合
