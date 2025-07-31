@@ -94,7 +94,7 @@ if DATABASE_URL:
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': '/tmp/db.sqlite3' if VERCEL else BASE_DIR / 'db.sqlite3',
+                'NAME': '/tmp/db.sqlite3' if os.environ.get('VERCEL') else BASE_DIR / 'db.sqlite3',
             }
         }
     DATABASES['default']['ENGINE'] = 'django_pg8000' 
@@ -105,7 +105,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': '/tmp/db.sqlite3' if VERCEL else BASE_DIR / 'db.sqlite3',
+            'NAME': '/tmp/db.sqlite3'if os.environ.get('VERCEL') else BASE_DIR / 'db.sqlite3',
         }
     }
 
