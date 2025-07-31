@@ -27,18 +27,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-j%)np(faguein(=1bu!4&8hx4#+rrp7g6+_+(w1zch)(00d6gn')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = False
 
-# Vercel環境の検出
-VERCEL = os.environ.get('VERCEL', 'False') == 'True'
-
-# ALLOWED_HOSTS設定
-if VERCEL:
-    ALLOWED_HOSTS = ['*']
-else:
-    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
-
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'file-mapping-app-main-kzta.onrender.com']
 
 # Application definition
 
