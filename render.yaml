@@ -1,22 +1,69 @@
+# render.yaml
+
 services:
   - type: web
     name: file-mapping-app
     env: python
     plan: free
-    buildCommand: "./build.sh"
-    startCommand: "gunicorn archive_project.wsgi:application"
+
+    # Gitリポジトリのブランチ。あなたのデプロイしたいブランチ名に変更してください。
+    branch: main
+
+    # アプリケーションのルートディレクトリ。リポジトリのルートにDjangoプロジェクトがある場合は空のままでOKです。
+    # rootDirectory: backend # 例: もしDjangoプロジェクトがリポジトリの 'backend/' ディレクトリにある場合
+
+    # ビルドコマンド
+    # build.sh の内容をここに直接記述します。
+    buildCommand: |
+      # exit on error
+      set -o errexit
+
+      # Set Django settings module
+      export DJANGO_SETTINGS_MODULE=archive_project.settings
+
+      echo "Installing dependencies..."
+      pip install -r requirements.txt
+
+      echo "Collecting static files..."
+      python manage.py collectstatic --no-input
+
+      echo "Running database migrations..."
+      python manage.py migrate
+
+      echo "Build completed successfully!"
+
+    # スタートコマンド
+    # 'archive_project' はあなたのDjangoプロジェクト名に置き換えてください。
+    startCommand: gunicorn archive_project.wsgi:application
+
+    # 環境変数
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.11.0 # 必要に応じて変更してください
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
-        value: False
+        value: "False"
       - key: RENDER
-        value: True
+        value: "True"
       - key: DATABASE_URL
-        # ここにSupabaseのデータベース接続URLを貼り付けてください。
+        # ここにあなたのSupabaseデータベース接続URIを貼り付けてください。
         # 例: postgresql://postgres:[YOUR_PASSWORD]@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres
-        value: "postgresql://postgres.ccjipkceqlrnqbcifjjl:yuya1652@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres" # <-- ここをSupabaseのURLに置き換えてください
+        value: "postgresql://postgres.ccjipkceqlrnqbcifjjl:yuya1652@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
+
+      - key: SUPABASE_URL
+        # あなたのSupabaseプロジェクトのURL (例: https://[PROJECT_REF].supabase.co)
+        # Supabaseダッシュボードの「Project Settings」->「API」で確認できます。
+        value: "https://ccjipkceqlrnqbcifjjl.supabase.co" # <-- ★ここをあなたのSupabase API URLに置き換えてください★
+
+      - key: SUPABASE_ANON_KEY
+        # あなたのSupabase Service Role Key。
+        # Supabaseダッシュボードの「Project Settings」->「API」で確認できます。
+        # このキーは絶対に公開しないでください！
+        value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjamlwa2NlcWxybnFiY2lmampsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NDIxNTgsImV4cCI6MjA2ODExODE1OH0.owVmuaG3no1dxJYbGIGoakr1NcW-jFvAMPsO9QHsEeI" # <-- ★ここをあなたのSupabase Service Role Keyに置き換えてください★
+
       - key: ALLOWED_HOSTS
         value: ".onrender.com"
+
+    # ヘルスチェックパス
+    healthCheckPath: /admin/login/?next=/admin/ # またはあなたのアプリの公開URLの一部
