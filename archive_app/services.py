@@ -4,66 +4,79 @@ import folium
 from folium.plugins import MarkerCluster
 from supabase import create_client
 import urllib.parse
+from .models import UploadedItem
+from django.utils import timezone
 
 CSV_FILE = os.path.join(os.path.dirname(__file__), 'data', 'uploaded_data.csv')
 CSV_COLUMNS = ['file_path', 'file_type', 'description', 'address', 'latitude', 'longitude', 'upload_date']
 
 def add_data_to_csv(data: dict):
     """
-    受け取ったデータをCSVファイルに追記する。
+    受け取ったデータをDB(UploadedItem)に保存する。
+    互換性のため関数名はそのまま。
     """
-    # 必要なフィールドが存在することを確認
-    required_fields = ['file_path', 'file_type', 'address', 'latitude', 'longitude']
-    for field in required_fields:
-        if field not in data:
-            data[field] = ''
-    
-    # オプションフィールドのデフォルト値を設定
-    if 'description' not in data:
-        data['description'] = ''
-    if 'upload_date' not in data:
-        data['upload_date'] = ''
-    
-    df_new = pd.DataFrame([data])
-    if not os.path.exists(CSV_FILE):
-        df_new.to_csv(CSV_FILE, index=False, header=True, encoding='utf-8-sig')
-    else:
-        df_new.to_csv(CSV_FILE, mode='a', index=False, header=False, encoding='utf-8-sig')
+    defaults = {
+        'file_path': '',
+        'file_type': 'other',
+        'description': '',
+        'address': '',
+        'latitude': None,
+        'longitude': None,
+    }
+    payload = {**defaults, **(data or {})}
+
+    # 型の調整
+    try:
+        if payload['latitude'] in (None, '', 'nan'):
+            payload['latitude'] = None
+        else:
+            payload['latitude'] = float(payload['latitude'])
+    except (ValueError, TypeError):
+        payload['latitude'] = None
+
+    try:
+        if payload['longitude'] in (None, '', 'nan'):
+            payload['longitude'] = None
+        else:
+            payload['longitude'] = float(payload['longitude'])
+    except (ValueError, TypeError):
+        payload['longitude'] = None
+
+    UploadedItem.objects.create(
+        file_path=payload['file_path'],
+        file_type=payload['file_type'] or 'other',
+        description=payload['description'] or '',
+        address=payload['address'] or '',
+        latitude=payload['latitude'],
+        longitude=payload['longitude'],
+    )
 
 def get_dataframe_from_csv():
     """
-    CSVファイルからデータを読み込み、pandasデータフレームとして返す。
+    DB(UploadedItem)からデータを読み込み、pandasデータフレームとして返す。
+    互換性のため関数名はそのまま。
     """
-    if not os.path.exists(CSV_FILE):
+    items = UploadedItem.objects.all().order_by('-upload_date')
+    records = []
+    for item in items:
+        records.append({
+            'file_path': item.file_path,
+            'file_type': item.file_type,
+            'description': item.description or '',
+            'address': item.address or '',
+            'latitude': item.latitude,
+            'longitude': item.longitude,
+            'upload_date': item.upload_date.strftime('%Y-%m-%d %H:%M:%S') if item.upload_date else '',
+        })
+
+    if not records:
         empty_df = pd.DataFrame()
         for column in CSV_COLUMNS:
             empty_df[column] = []
         return empty_df
-    
-    try:
-        # CSVファイルを読み込み、エラー処理を追加
-        df = pd.read_csv(CSV_FILE, encoding='utf-8-sig', dtype=str)
-        
-        # 古いCSVファイルの場合、新しいフィールドを追加
-        for column in CSV_COLUMNS:
-            if column not in df.columns:
-                df[column] = ''
-        
-        # 不要な列を削除（CSV_COLUMNSに含まれていない列）
-        columns_to_keep = [col for col in df.columns if col in CSV_COLUMNS]
-        df = df[columns_to_keep]
-        
-        # 空の値をNaNに変換
-        df = df.replace('', pd.NaT)
-        
-        return df
-    except Exception as e:
-        print(f"CSV読み込みエラー: {e}")
-        # エラーの場合は空のDataFrameを返す
-        empty_df = pd.DataFrame()
-        for column in CSV_COLUMNS:
-            empty_df[column] = []
-        return empty_df
+
+    df = pd.DataFrame.from_records(records, columns=CSV_COLUMNS)
+    return df
 
 def create_map_html() -> str:
     """

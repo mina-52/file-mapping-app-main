@@ -87,9 +87,10 @@ WSGI_APPLICATION = 'archive_project.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Check if we're in production (Render) or development (SQLite)
+# Supabase/Postgres 接続文字列があれば、デバッグ時でも優先して利用する
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if DATABASE_URL and not DEBUG:
+if DATABASE_URL:
     # Production: Use Render PostgreSQL
     try:
         import dj_database_url
