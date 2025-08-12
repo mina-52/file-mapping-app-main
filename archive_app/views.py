@@ -7,6 +7,8 @@ import urllib.parse
 from datetime import datetime
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
+from pathlib import Path
+import uuid
 
 # --- このアプリケーションで作成したもの ---
 from .forms import UploadForm
@@ -26,7 +28,8 @@ def map_view(request):
             uploaded_file = request.FILES['file']
             
             # 1. ファイルをSupabase Storageにアップロードし、公開URLを取得
-            storage_file_name = uploaded_file.name 
+            original_extension = Path(uploaded_file.name).suffix
+            storage_file_name = f"{uuid.uuid4()}{original_extension}"
             public_url = upload_file_to_supabase_storage(uploaded_file, storage_file_name)
 
             # 2. フォームから送信された緯度・経度・住所を取得
