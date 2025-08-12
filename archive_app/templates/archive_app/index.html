@@ -1,15 +1,19 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ファイルマッピングアプリ</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{% static 'archive_app/css/style.css' %}">
-    
-    <!-- Leaflet CSS -->
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
     <style>
         #map {
             height: 500px;
@@ -17,7 +21,7 @@
             border-radius: 8px;
             border: 2px solid #e1e5e9;
         }
-        
+
         .map-instructions {
             background: #f8f9fa;
             padding: 10px;
@@ -25,22 +29,23 @@
             margin-bottom: 10px;
             border-left: 4px solid #667eea;
         }
-        
+
         .selection-notification {
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-        
+
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
             }
         }
-        
+
         .coordinates-display {
             background: #e3f2fd;
             padding: 10px;
@@ -49,12 +54,12 @@
             border-left: 4px solid #2196f3;
             display: none;
         }
-        
+
         .nav-links {
             text-align: center;
             margin: 20px 0;
         }
-        
+
         .nav-links a {
             display: inline-block;
             padding: 10px 20px;
@@ -65,12 +70,13 @@
             margin: 0 10px;
             transition: background 0.3s;
         }
-        
+
         .nav-links a:hover {
             background: #5a6fd8;
         }
     </style>
 </head>
+
 <body>
     <header class="header">
         <h1>ファイルマッピングアプリ</h1>
@@ -85,22 +91,23 @@
     <div class="container">
         <div class="form-section">
             <h2>ファイルアップロード</h2>
-            
+
             {% if error %}
-                <div class="status error">
-                    <i class="fas fa-exclamation-circle"></i>
-                    {{ error }}
-                </div>
+            <div class="status error">
+                <i class="fas fa-exclamation-circle"></i>
+                {{ error }}
+            </div>
             {% endif %}
-            
+
             <form method="post" enctype="multipart/form-data" id="uploadForm">
                 {% csrf_token %}
-                
+
                 <div class="form-group">
                     <label for="{{ form.file.id_for_label }}">
                         <i class="fas fa-file-upload"></i> ファイルを選択
                     </label>
-                    <div class="file-upload-area" onclick="document.getElementById('{{ form.file.id_for_label }}').click()">
+                    <div class="file-upload-area"
+                        onclick="document.getElementById('{{ form.file.id_for_label }}').click()">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <p>クリックしてファイルを選択</p>
                         <small>画像、動画、音声ファイルに対応</small>
@@ -131,7 +138,6 @@
                     <small>地図上でクリックするか、手動で入力してください</small>
                 </div>
 
-                <!-- 隠しフィールド -->
                 {{ form.latitude }}
                 {{ form.longitude }}
 
@@ -142,12 +148,13 @@
             </form>
 
             {% if messages %}
-                {% for message in messages %}
-                    <div class="status {% if message.tags %}{{ message.tags }}{% endif %}">
-                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
-                        {{ message }}
-                    </div>
-                {% endfor %}
+            {% for message in messages %}
+            <div class="status {% if message.tags %}{{ message.tags }}{% endif %}">
+                <i
+                    class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
             {% endif %}
         </div>
 
@@ -156,89 +163,92 @@
             <div class="map-instructions">
                 <p><i class="fas fa-mouse-pointer"></i> 地図上をクリックして位置を選択できます</p>
             </div>
-            
+
             <div class="coordinates-display" id="coordinatesDisplay">
                 <strong>選択された位置:</strong> <span id="selectedCoordinates"></span>
             </div>
-            
+
             <div id="map"></div>
-            
+
             <div class="map-info">
                 <p><i class="fas fa-info-circle"></i> マーカーをクリックしてファイルを確認</p>
             </div>
         </div>
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+
     <script>
         // グローバル変数
         let map;
         let selectionMarker;
-        let existingMarkers = [];
-        
+        let markers = L.markerClusterGroup(); // マーカークラスタリンググループを初期化
+
         // 地図の初期化
         function initMap() {
             // 日本の中心を初期位置に設定
             const center = [36.204824, 138.252924];
-            
+
             // 地図を作成
             map = L.map('map').setView(center, 5);
-            
+
             // 地理院タイルレイヤーを追加
             L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
                 attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル</a>'
             }).addTo(map);
-            
+
+            // マーカークラスタリンググループを地図に追加
+            map.addLayer(markers);
+
             // 既存のマーカーを表示
             loadExistingMarkers();
-            
+
             // クリックイベントを追加
             map.on('click', onMapClick);
-            
+
             console.log('地図が初期化されました');
         }
-        
+
         // 地図クリック時の処理
         function onMapClick(e) {
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
-            
+
             console.log('地図がクリックされました:', lat, lng);
-            
+
             // フォームの隠しフィールドに値を設定
             const latField = document.getElementById('{{ form.latitude.id_for_label }}');
             const lngField = document.getElementById('{{ form.longitude.id_for_label }}');
             const addressField = document.getElementById('{{ form.address.id_for_label }}');
-            
+
             if (latField && lngField) {
                 latField.value = lat;
                 lngField.value = lng;
-                
+
                 // 住所フィールドに一時的な表示
                 if (addressField) {
                     addressField.value = `地図上で選択: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                 }
-                
+
                 // 座標表示を更新
                 showCoordinates(lat, lng);
-                
+
                 // 選択マーカーを表示
                 showSelectionMarker(lat, lng);
-                
+
                 // 通知を表示
                 showSelectionNotification(lat, lng);
             }
         }
-        
+
         // 選択マーカーを表示
         function showSelectionMarker(lat, lng) {
             // 既存の選択マーカーを削除
             if (selectionMarker) {
                 map.removeLayer(selectionMarker);
             }
-            
+
             // 新しい選択マーカーを作成
             selectionMarker = L.marker([lat, lng], {
                 icon: L.divIcon({
@@ -248,9 +258,9 @@
                     iconAnchor: [10, 10]
                 })
             });
-            
+
             selectionMarker.addTo(map);
-            
+
             // 3秒後にマーカーを削除
             setTimeout(() => {
                 if (selectionMarker && map) {
@@ -259,18 +269,18 @@
                 }
             }, 3000);
         }
-        
+
         // 座標表示を更新
         function showCoordinates(lat, lng) {
             const display = document.getElementById('coordinatesDisplay');
             const coordsSpan = document.getElementById('selectedCoordinates');
-            
+
             if (display && coordsSpan) {
                 coordsSpan.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                 display.style.display = 'block';
             }
         }
-        
+
         // 選択通知を表示
         function showSelectionNotification(lat, lng) {
             const notification = document.createElement('div');
@@ -291,9 +301,9 @@
                 animation: slideIn 0.3s ease-out;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             `;
-            
+
             document.body.appendChild(notification);
-            
+
             // 3秒後に通知を削除
             setTimeout(() => {
                 if (notification.parentNode) {
@@ -301,9 +311,12 @@
                 }
             }, 3000);
         }
-        
+
         // 既存のマーカーを読み込んで表示
         function loadExistingMarkers() {
+            // マーカークラスタリンググループをクリア
+            markers.clearLayers();
+
             // サーバーから既存のマーカーデータを取得
             fetch('/get_markers/')
                 .then(response => {
@@ -319,8 +332,7 @@
                             if (item.latitude && item.longitude) {
                                 try {
                                     const marker = createFileMarker(item);
-                                    marker.addTo(map);
-                                    existingMarkers.push(marker);
+                                    markers.addLayer(marker); // マーカーをグループに追加
                                 } catch (e) {
                                     console.log('マーカー作成エラー:', e);
                                 }
@@ -334,19 +346,19 @@
                     console.log('マーカーの読み込みエラー:', error);
                 });
         }
-        
+
         // ファイルマーカーを作成
         function createFileMarker(data) {
             try {
                 const iconSettings = {
-                    'image': {color: 'blue', icon: 'camera'},
-                    'video': {color: 'red', icon: 'video-camera'},
-                    'audio': {color: 'green', icon: 'music'},
-                    'other': {color: 'purple', icon: 'file'}
+                    'image': { color: 'blue', icon: 'camera' },
+                    'video': { color: 'red', icon: 'video-camera' },
+                    'audio': { color: 'green', icon: 'music' },
+                    'other': { color: 'purple', icon: 'file' }
                 };
-                
+
                 const setting = iconSettings[data.file_type] || iconSettings['other'];
-                
+
                 const marker = L.marker([data.latitude, data.longitude], {
                     icon: L.icon({
                         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${setting.color}.png`,
@@ -357,10 +369,10 @@
                         shadowSize: [41, 41]
                     })
                 });
-                
+
                 // 説明フィールドの処理
                 const description = data.description ? `<br><b>説明:</b> ${data.description}` : '';
-                
+
                 // ポップアップを作成
                 const popupContent = `
                     <div style="min-width:150px;">
@@ -371,7 +383,7 @@
                         </div>
                     </div>
                 `;
-                
+
                 marker.bindPopup(popupContent);
                 return marker;
             } catch (e) {
@@ -379,12 +391,12 @@
                 throw e;
             }
         }
-        
+
         // ファイル選択時の表示更新
-        document.getElementById('{{ form.file.id_for_label }}').addEventListener('change', function(e) {
+        document.getElementById('{{ form.file.id_for_label }}').addEventListener('change', function (e) {
             const file = e.target.files[0];
             const uploadArea = document.querySelector('.file-upload-area');
-            
+
             if (file) {
                 uploadArea.innerHTML = `
                     <i class="fas fa-file"></i>
@@ -397,13 +409,13 @@
         });
 
         // フォーム送信時のローディング表示
-        document.getElementById('uploadForm').addEventListener('submit', function() {
+        document.getElementById('uploadForm').addEventListener('submit', function () {
             const btn = this.querySelector('button[type="submit"]');
             const originalText = btn.innerHTML;
-            
+
             btn.innerHTML = '<span class="loading"></span> アップロード中...';
             btn.disabled = true;
-            
+
             // 5秒後にボタンを元に戻す（エラー時の対策）
             setTimeout(() => {
                 btn.innerHTML = originalText;
@@ -413,18 +425,19 @@
 
         // 住所入力の自動補完（簡易版）
         const addressInput = document.getElementById('{{ form.address.id_for_label }}');
-        addressInput.addEventListener('focus', function() {
+        addressInput.addEventListener('focus', function () {
             this.style.borderColor = '#667eea';
         });
-        
-        addressInput.addEventListener('blur', function() {
+
+        addressInput.addEventListener('blur', function () {
             this.style.borderColor = '#e1e5e9';
         });
 
         // ページ読み込み完了後に地図を初期化
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             initMap();
         });
     </script>
 </body>
+
 </html>
