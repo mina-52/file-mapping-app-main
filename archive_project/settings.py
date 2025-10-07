@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import sys
 
 # Load environment variables from .env file
 load_dotenv()
@@ -27,18 +28,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-j%)np(faguein(=1bu!4&8hx4#+rrp7g6+_+(w1zch)(00d6gn')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = True
 
-# Vercel環境の検出
-VERCEL = os.environ.get('VERCEL', 'False') == 'True'
-
-# ALLOWED_HOSTS設定
-if VERCEL:
-    ALLOWED_HOSTS = ['*']
-else:
-    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
-
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'file-mapping-app-main-kzta.onrender.com']
 
 # Application definition
 
@@ -89,30 +81,57 @@ WSGI_APPLICATION = 'archive_project.wsgi.application'
 # Check if we're in production (Supabase) or development (SQLite)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if DATABASE_URL and not DEBUG:
-    # Production: Use Supabase PostgreSQL
+if DATABASE_URL:
+    # Use Supabase PostgreSQL (both development and production)
     try:
         import dj_database_url
         DATABASES = {
             'default': dj_database_url.parse(DATABASE_URL)
         }
+        print(f"✅ Using Supabase PostgreSQL: {DATABASE_URL[:50]}...")
     except ImportError:
+        print("❌ dj_database_url not found, install it with: pip install dj-database-url")
         # Fallback to SQLite if dj_database_url is not available
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': '/tmp/db.sqlite3' if VERCEL else BASE_DIR / 'db.sqlite3',
+                'NAME': '/tmp/db.sqlite3' if os.environ.get('VERCEL') else BASE_DIR / 'db.sqlite3',
             }
         }
+    DATABASES['default']['ENGINE'] = 'django_pg8000' 
+
 else:
     # Development: Use SQLite
+    print("ℹ️  Using SQLite database")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': '/tmp/db.sqlite3' if VERCEL else BASE_DIR / 'db.sqlite3',
+            'NAME': '/tmp/db.sqlite3'if os.environ.get('VERCEL') else BASE_DIR / 'db.sqlite3',
         }
     }
 
+# --- START DIAGNOSTIC BLOCK ---
+# Renderの環境変数をデバッグするためのブロック
+print("--- STARTING DIAGNOSTICS ---")
+database_url = os.environ.get('DATABASE_URL')
+supabase_url = os.environ.get('SUPABASE_URL')
+supabase_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+
+# os.environ.get()が何を取得しているか、ブール値でログに出力
+print(f"DATABASE_URL is set: {bool(database_url)}")
+print(f"SUPABASE_URL is set: {bool(supabase_url)}")
+print(f"SUPABASE_SERVICE_ROLE_KEY is set: {bool(supabase_key)}")
+
+# 本番環境（Render）でDATABASE_URLがなければ、SQLiteに頼らずに意図的にデプロイを失敗させる
+IS_PRODUCTION = "gunicorn" in sys.argv[0]
+print(f"Running in production (gunicorn): {IS_PRODUCTION}")
+
+if IS_PRODUCTION and not database_url:
+    print("FATAL ERROR: DATABASE_URL is not set in the production environment!")
+    sys.exit(1) # これでビルドが明確に失敗する
+
+print("--- ENDING DIAGNOSTICS ---")
+# --- END DIAGNOSTIC BLOCK ---
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

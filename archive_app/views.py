@@ -1,189 +1,144 @@
-from django.shortcuts import render, redirect
-from django.core.files.storage import FileSystemStorage
-from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
-from .forms import UploadForm
-from .services import add_data_to_csv, create_map_html, get_dataframe_from_csv, upload_file_to_supabase_storage
-from .utils import geocode_address, reverse_geocode
-from django.conf import settings
+# archive_app/views.py
+
+# --- DjangoとPythonの基本ライブラリ ---
 import os
-import pandas as pd
-from datetime import datetime
 import requests
 import urllib.parse
+from datetime import datetime
+from django.shortcuts import render, redirect
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
+from pathlib import Path
+import uuid
+
+# --- このアプリケーションで作成したもの ---
+from .forms import UploadForm
+from .models import Archive  # データベースと連携するためのモデル
+from .services import upload_file_to_supabase_storage # Supabaseアップロード用関数
+from .utils import geocode_address, reverse_geocode # ジオコーディング用関数
+
 
 def map_view(request):
+    """
+    メインの地図ページを表示、およびファイルアップロードを処理するビュー
+    """
+    # --- POSTリクエスト（フォームが送信された）場合の処理 ---
     if request.method == 'POST':
         form = UploadForm(request.POST, request.FILES)
         if form.is_valid():
-            # 1. ファイルをSupabase Storageに保存
             uploaded_file = request.FILES['file']
-            storage_file_name = uploaded_file.name
+            
+            # 1. ファイルをSupabase Storageにアップロードし、公開URLを取得
+            original_extension = Path(uploaded_file.name).suffix
+            storage_file_name = f"{uuid.uuid4()}{original_extension}"
             public_url = upload_file_to_supabase_storage(uploaded_file, storage_file_name)
-            file_path = public_url
 
-            # 2. 位置情報の取得
+            # 2. フォームから送信された緯度・経度・住所を取得
             lat = form.cleaned_data.get('latitude')
             lon = form.cleaned_data.get('longitude')
             address = form.cleaned_data.get('address', '')
 
-            # 地図上でクリックされた場合
-            if lat is not None and lon is not None:
-                # 逆ジオコーディングで住所を取得
-                if not address:
-                    address = reverse_geocode(lat, lon)
-            # 住所が手動入力された場合
-            elif address:
+            # 3. 緯度・経度と住所を相互に補完
+            #    - 住所だけ入力されていれば、緯度・経度を検索
+            #    - 緯度・経度だけ入力されていれば、住所を検索
+            if not lat and not lon and address:
                 lat, lon = geocode_address(address)
-            else:
-                # 位置情報がない場合はエラー
-                return render(request, 'archive_app/index.html', {
-                    'form': form,
-                    'error': '地図上でクリックするか、住所を入力してください。'
-                })
-
+            elif lat and lon and not address:
+                address = reverse_geocode(lat, lon)
+            
+            # 4. 最終的な位置情報をもとに、データベースへ保存
             if lat is not None and lon is not None:
-                # 3. データを準備してCSVに保存
-                new_data = {
-                    'file_path': file_path,
-                    'file_type': form.cleaned_data['file_type'],
-                    'description': form.cleaned_data.get('description', ''),
-                    'address': address,
-                    'latitude': lat,
-                    'longitude': lon,
-                    'upload_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-                add_data_to_csv(new_data)
+                # Archiveモデルのインスタンス（データ1行分）を作成
+                archive_data = Archive(
+                    file_path=public_url,
+                    file_type=form.cleaned_data['file_type'],
+                    description=form.cleaned_data.get('description', ''),
+                    address=address,
+                    latitude=lat,
+                    longitude=lon,
+                )
+                # データベースに保存を実行
+                archive_data.save()
             else:
-                # エラーメッセージをユーザーに表示する処理
-                return render(request, 'archive_app/index.html', {
-                    'form': form,
-                    'error': f'位置情報の取得に失敗しました: {address}'
-                })
+                # 住所から位置が特定できなかった場合のエラー表示
+                context = {'form': form, 'error': '位置情報が取得できませんでした。'}
+                return render(request, 'archive_app/index.html', context)
 
-            return redirect('map_view') # 処理後に同じページにリダイレクトして再表示
+            # 処理完了後、同じページにリダイレクトしてフォームの二重送信を防ぐ
+            return redirect('map_view')
+            
+    # --- GETリクエスト（初めてページが表示された）場合の処理 ---
     else:
         form = UploadForm()
 
-    context = {
-        'form': form,
-    }
+    context = {'form': form}
     return render(request, 'archive_app/index.html', context)
+
 
 def get_markers(request):
     """
-    既存のマーカーデータをJSON形式で返すAPIエンドポイント
+    地図に表示するマーカー情報をJSON形式で提供するAPIビュー
+    （JavaScriptから非同期で呼び出される）
     """
-    try:
-        df = get_dataframe_from_csv()
-        markers = []
+    # データベースのArchiveテーブルから全てのデータを取得
+    all_archives = Archive.objects.all()
+    
+    markers = []
+    # 取得した各データを、JavaScriptで扱いやすい辞書の形に変換
+    for item in all_archives:
+        markers.append({
+            'latitude': item.latitude,
+            'longitude': item.longitude,
+            'address': item.address,
+            'file_type': item.file_type,
+            'description': item.description,
+            'file_name': os.path.basename(item.file_path),
+            'file_url': item.file_path,
+            'upload_date': item.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        })
         
-        if df.empty:
-            return JsonResponse(markers, safe=False)
-        
-        for _, row in df.iterrows():
-            # 緯度・経度の存在確認
-            if 'latitude' not in row.index or 'longitude' not in row.index:
-                continue
-                
-            lat = row['latitude']
-            lon = row['longitude']
-            
-            # 数値の確認
-            try:
-                lat_val = float(lat) if lat is not None and str(lat).strip() != '' and str(lat).strip() != 'nan' else None
-                lon_val = float(lon) if lon is not None and str(lon).strip() != '' and str(lon).strip() != 'nan' else None
-            except (ValueError, TypeError):
-                continue
-                
-            if lat_val is not None and lon_val is not None:
-                markers.append({
-                    'latitude': lat_val,
-                    'longitude': lon_val,
-                    'address': str(row.get('address', '')) if row.get('address') and str(row.get('address')).strip() != '' and str(row.get('address')).strip() != 'nan' else '',
-                    'file_type': str(row.get('file_type', 'other')),
-                    'description': str(row.get('description', '')) if row.get('description') and str(row.get('description')).strip() != '' and str(row.get('description')).strip() != 'nan' else '',
-                    'file_name': os.path.basename(str(row.get('file_path', ''))),
-                    'upload_date': str(row.get('upload_date', '')) if row.get('upload_date') and str(row.get('upload_date')).strip() != '' and str(row.get('upload_date')).strip() != 'nan' else ''
-                })
-        
-        return JsonResponse(markers, safe=False)
-    except Exception as e:
-        print(f"マーカー取得エラー: {e}")
-        return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse(markers, safe=False)
+
 
 def file_list(request):
     """
-    アップロードされたファイルの一覧を表示
+    アップロードされたファイルの一覧ページを表示するビュー
     """
-    try:
-        df = get_dataframe_from_csv()
-        files = []
-        
-        if df.empty:
-            context = {'files': []}
-            return render(request, 'archive_app/file_list.html', context)
-        
-        for _, row in df.iterrows():
-            try:
-                # 緯度・経度の処理
-                lat = None
-                lon = None
-                if 'latitude' in row and 'longitude' in row:
-                    try:
-                        lat = float(row['latitude']) if row['latitude'] is not None and str(row['latitude']).strip() != '' and str(row['latitude']).strip() != 'nan' else None
-                        lon = float(row['longitude']) if row['longitude'] is not None and str(row['longitude']).strip() != '' and str(row['longitude']).strip() != 'nan' else None
-                    except (ValueError, TypeError):
-                        pass
-                
-                files.append({
-                    'file_name': os.path.basename(str(row.get('file_path', ''))),
-                    'file_type': str(row.get('file_type', 'other')),
-                    'description': str(row.get('description', '')) if row.get('description') and str(row.get('description')).strip() != '' and str(row.get('description')).strip() != 'nan' else '',
-                    'address': str(row.get('address', '')) if row.get('address') and str(row.get('address')).strip() != '' and str(row.get('address')).strip() != 'nan' else '',
-                    'latitude': lat,
-                    'longitude': lon,
-                    'upload_date': str(row.get('upload_date', '')) if row.get('upload_date') and str(row.get('upload_date')).strip() != '' and str(row.get('upload_date')).strip() != 'nan' else '',
-                    'file_url': str(row.get('file_path', ''))
-                })
-            except Exception as e:
-                print(f"ファイル処理エラー: {e}")
-                continue
-        
-        # アップロード日時で降順ソート
-        files.sort(key=lambda x: x['upload_date'], reverse=True)
-        
-        context = {
-            'files': files
-        }
-        return render(request, 'archive_app/file_list.html', context)
-    except Exception as e:
-        print(f"ファイル一覧取得エラー: {e}")
-        context = {
-            'files': [],
-            'error': str(e)
-        }
-        return render(request, 'archive_app/file_list.html', context)
+    # データベースから作成日時が新しい順に全てのデータを取得
+    files_from_db = Archive.objects.order_by('-created_at')
+    
+    # 取得したデータをテンプレートに渡す
+    context = {
+        'files': files_from_db
+    }
+    return render(request, 'archive_app/file_list.html', context)
+
 
 def download_file(request):
     """
-    SupabaseのパブリックURLからファイルを取得し、ダウンロードレスポンスとして返す
+    SupabaseのURLからファイルを取得し、ダウンロードさせるためのビュー
+    （この関数のロジックは変更不要）
     """
     file_url = request.GET.get('url')
     filename = request.GET.get('filename')
+
     if not file_url:
-        return HttpResponse('URLが指定されていません'.encode('utf-8'), status=400)
+        return HttpResponse('URLが指定されていません', status=400)
+    
     file_url = urllib.parse.unquote(file_url)
     if not filename:
-        # URLの最後の/以降をファイル名として利用
         parsed_url = urllib.parse.urlparse(file_url)
         filename = os.path.basename(parsed_url.path)
+        
     try:
         r = requests.get(file_url, stream=True)
         r.raise_for_status()
+        
         response = StreamingHttpResponse(r.iter_content(chunk_size=8192), content_type=r.headers.get('Content-Type', 'application/octet-stream'))
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
         if 'Content-Length' in r.headers:
             response['Content-Length'] = r.headers['Content-Length']
+            
         return response
     except Exception as e:
-        return HttpResponse(f'ダウンロードエラー: {e}'.encode('utf-8'), status=500)
+        return HttpResponse(f'ダウンロードエラー: {e}', status=500)
